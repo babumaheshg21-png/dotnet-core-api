@@ -3,7 +3,7 @@ name: Build and Deploy .NET API to App Service and APIM
 on:
   push:
     branches:
-      - main   # Trigger when you edit files in GitHub browser
+      - master   # Trigger when you edit files in GitHub browser
 
 jobs:
   build-deploy:
@@ -73,3 +73,4 @@ jobs:
           --specification-path ./publish/swagger/v1/swagger.json \
           --service-url https://appservicemahesh.azurewebsites.net \
           --subscription-required false
+
