@@ -3,63 +3,91 @@
 
 name: Build and deploy ASP.Net Core app to Azure Web App - customer-api-practice
 
+# name: CI-CD .NET API to App Service and APIM
+
+# Pipeline triggers automatically when code is pushed to main branch
 on:
   push:
     branches:
-      - master
-  workflow_dispatch:
+      - main
 
 jobs:
-  build:
-    runs-on: windows-latest
-    permissions:
-      contents: read #This is required for actions/checkout
+  build-deploy:
+    runs-on: ubuntu-latest   # GitHub-hosted agent
 
     steps:
-      - uses: actions/checkout@v4
+    # -----------------------------
+    # STEP 1: Checkout source code
+    # -----------------------------
+    - name: Checkout code
+      uses: actions/checkout@v4
+      # Pulls latest code from GitHub repo into the runner
 
-      - name: Set up .NET Core
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.x'
+    # -----------------------------
+    # STEP 2: Setup .NET SDK
+    # -----------------------------
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+      # Installs required .NET SDK version
 
-      - name: Build with dotnet
-        run: dotnet build --configuration Release
+    # -----------------------------
+    # STEP 3: Restore NuGet packages
+    # -----------------------------
+    - name: Restore dependencies
+      run: dotnet restore
+      # Downloads all required NuGet packages
 
-      - name: dotnet publish
-        run: dotnet publish -c Release -o "${{env.DOTNET_ROOT}}/myapp"
+    # -----------------------------
+    # STEP 4: Build the application
+    # -----------------------------
+    - name: Build application
+      run: dotnet build --configuration Release --no-restore
+      # Compiles the code in Release mode
 
-      - name: Upload artifact for deployment job
-        uses: actions/upload-artifact@v4
-        with:
-          name: .net-app
-          path: ${{env.DOTNET_ROOT}}/myapp
+    # -----------------------------
+    # STEP 5: Publish build output
+    # -----------------------------
+    - name: Publish application
+      run: dotnet publish -c Release -o publish
+      # Creates deployable files in /publish folder
 
-  deploy:
-    runs-on: windows-latest
-    needs: build
-    permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
+    # -----------------------------
+    # STEP 6: Login to Azure
+    # -----------------------------
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+      # Authenticates GitHub Actions to Azure using Service Principal
 
-    steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v4
-        with:
-          name: .net-app
-      
-      - name: Login to Azure
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_05186E3D9A7B4517B7B5B83ADB8E7B13 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_2C446D07DE104D5EACB02FFA79A2B5B8 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_D4DA47924D0845AABDC17141A6C164EC }}
+    # -----------------------------
+    # STEP 7: Deploy to Azure App Service
+    # -----------------------------
+    - name: Deploy to Azure App Service
+      uses: azure/webapps-deploy@v3
+      with:
+        app-name: AppServicemahesh
+        package: ./publish
+      # Deploys published .NET API to Azure App Service
 
-      - name: Deploy to Azure Web App
-        id: deploy-to-webapp
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: 'customer-api-practice'
-          slot-name: 'Production'
-          package: .
+    # -----------------------------
+    # STEP 8: Import / Update API in APIM
+    # -----------------------------
+    - name: Import API into Azure APIM
+      uses: azure/cli@v1
+      with:
+        inlineScript: |
+          az apim api import \
+            --resource-group AppServiceresourcegroupmahesh \
+            --service-name Apimmahesh \
+            --api-id dotnet-core-api \
+            --path dotnet-api \
+            --specification-format OpenApi \
+            --specification-path https://appservicemahesh.azurewebsites.net/swagger/v1/swagger.json \
+            --service-url https://appservicemahesh.azurewebsites.net
+      # Automatically registers or updates API in APIM using Swagger
+
+
           
