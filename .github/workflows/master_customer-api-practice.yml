@@ -70,7 +70,8 @@ jobs:
           --api-id dotnet-api \
           --path dotnet \
           --specification-format OpenApi \
-          --specification-path ./publish/swagger/v1/swagger.json \
+          --specification-path https://appservicemahesh.azurewebsites.net/swagger/v1/swagger.json \
           --service-url https://appservicemahesh.azurewebsites.net \
           --subscription-required false
+
 
