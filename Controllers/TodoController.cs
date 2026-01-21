@@ -28,12 +28,18 @@ namespace TodoApi.Controllers
             }
         }
 
-        // GET: api/Todo
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<TodoItem>>> GetTodoItem()
-        {
-            return await _context.TodoItems.ToListAsync();
-        }
+public async Task<ActionResult<object>> GetTodoItem()
+{
+    var items = await _context.TodoItems.ToListAsync();
+
+    return Ok(new
+    {
+        serverTime = DateTime.UtcNow,
+        count = items.Count,
+        data = items
+    });
+}
 
         // GET: api/Todo/5
         [HttpGet("{id}")]
